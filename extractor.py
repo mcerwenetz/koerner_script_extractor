@@ -5,24 +5,31 @@ import shutil
 import logging
 import gc
 
+MAX_AUDIO_FILES_PER_PPT = 100
+INPUT_PATH_PREFIX = "in"
+OUTPUT_PATH_PREFIX = "out"
+
 
 def rename_all_pptx():
 
-    all_files = os.listdir()
+    all_files = os.listdir(INPUT_PATH_PREFIX)
 
     for filename in all_files:
-        
+
         if filename.endswith('.pptx'):
-            logging.info(f"renaming filename {filename}")
             filename_without_suffix = filename.split(".")[0]
+            source_file_path = os.sep.join([INPUT_PATH_PREFIX, filename])
             filename_as_zip = filename_without_suffix + ".zip"
-            shutil.copyfile(filename, filename_as_zip)
+            dest_file_path = os.sep.join([INPUT_PATH_PREFIX, filename_as_zip])
+            logging.info(f"renaming filename {filename}")
+            shutil.copyfile(source_file_path, dest_file_path)
 
 
 def extract_one_audio(zip_file: myzipfile.ZipFile, path: str):
+    logging.info(f"extracting all audios of file {path}")
+
     for filename in zip_file.namelist():
         if filename.endswith(".m4a"):
-            logging.info(f"extracting all audios of file {filename}")
 
             try:
                 zip_file.extract(filename, path=path)
@@ -49,24 +56,36 @@ def concat_all_audios(filepath, name):
     logging.info("exported chapter")
 
 
+def cleanup(folder_name):
+    logging.info("cleaning up temporary files")
+    file_name = folder_name + ".zip"
+    if os.path.exists(folder_name):
+        shutil.rmtree(folder_name)
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+
+
 def extract_all_audio_files():
 
-    all_files = [str(i) + ".zip" for i in range(1, 100)]
-    all_files = filter(lambda filename: os.path.isfile(filename), all_files)
+    all_files = sorted(os.listdir(INPUT_PATH_PREFIX))
+    zip_files = filter(lambda filename: filename.endswith(".zip"), all_files)
 
-    for idx, filename in enumerate(all_files):
+    for idx, filename in enumerate(zip_files):
 
-        with myzipfile.ZipFile(filename) as zip_file:
-            file_name_without_suffix = filename.split(".")[0]
-            if not os.path.exists(file_name_without_suffix):
-                os.mkdir(file_name_without_suffix)
-            extract_one_audio(zip_file, file_name_without_suffix)
-            concat_all_audios(filename.split(".")[0], str(idx+1))
+        file_path = os.sep.join([INPUT_PATH_PREFIX, filename])
+        with myzipfile.ZipFile(file_path) as zip_file:
+            folder_name = filename.split(".")[0]
+            folder_path = os.sep.join([INPUT_PATH_PREFIX,folder_name])
+            if not os.path.exists(folder_path):
+                os.mkdir(folder_path)
+            extract_one_audio(zip_file, folder_path)
+            # concat_all_audios(filename.split(".")[0], str(idx+1))
+            cleanup(folder_path)
 
 
 def concat_all_chapters():
     logging.info("concatinating all chapters")
-    files = [str(i) + ".mp3" for i in range(1, 100)]
+    files = [str(i) + ".mp3" for i in range(1, MAX_AUDIO_FILES_PER_PPT)]
     files = filter(lambda filename: os.path.isfile(filename), files)
 
     logging.info("reading all audios")
@@ -84,8 +103,17 @@ def concat_all_chapters():
     logging.info("finished concatinating everything")
 
 
+def create_structure():
+    if not os.path.exists(INPUT_PATH_PREFIX):
+        os.mkdir(INPUT_PATH_PREFIX)
+    if not os.path.exists(OUTPUT_PATH_PREFIX):
+        os.mkdir(OUTPUT_PATH_PREFIX)
+
+
 def main():
     logging.basicConfig(level=logging.INFO)
+    logging.info("creating folder structure if necessary")
+    create_structure()
     logging.info("copying pptx into zips")
     rename_all_pptx()
     logging.info("extracting all audio files")
