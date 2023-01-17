@@ -131,3 +131,7 @@ dmypy.json
 #ppt
 
 *.pptx
+
+
+in/*
+out/*

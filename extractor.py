@@ -6,21 +6,22 @@ import logging
 import gc
 import tracemalloc
 import threading
-import time 
+import time
 
 MAX_AUDIO_FILES_PER_PPT = 100
 INPUT_PATH_PREFIX = "in"
 OUTPUT_PATH_PREFIX = "out"
 
+
 def check_mem():
     tracemalloc.start()
-        
+
     while True:
         current, peak = tracemalloc.get_traced_memory()
-        print(f"Current memory usage is {current / 10**6}MB; Peak was {peak / 10**6}MB")
+        print(
+            f"Current memory usage is {current / 10**6}MB; Peak was {peak / 10**6}MB")
         time.sleep(0.1)
     tracemalloc.stop()
-    
 
 
 def rename_all_pptx():
@@ -54,16 +55,16 @@ def extract_one_audio(zip_file: myzipfile.ZipFile, path: str):
 def concat_all_audios(filepath, file_name):
     logging.info(f"concating all audios of chapter {filepath}")
     path = filepath + "/ppt/media/"
-    filelist = ["media" + str(i) + ".m4a" for i in range(1, MAX_AUDIO_FILES_PER_PPT)]
+    filelist = [
+        "media" + str(i) + ".m4a" for i in range(1, MAX_AUDIO_FILES_PER_PPT)]
     filelist = [path + file for file in filelist]
     filelist = filter(lambda filename: os.path.isfile(filename), filelist)
     audios = [pydub.AudioSegment.from_file(
         file) for file in filelist]
 
     chapter_audio = pydub.AudioSegment.empty()
-    # for audio in audios:
-        # logging.info(f"concatinating {audio}")
-        # chapter_audio = chapter_audio.append(audio, crossfade=0)
+    for audio in audios:
+        chapter_audio = chapter_audio.append(audio, crossfade=0)
     output_file_path = os.sep.join([OUTPUT_PATH_PREFIX, file_name])
     chapter_audio.export(output_file_path+".mp3", format="mp3", bitrate="128k")
     logging.info("exported chapter")
@@ -88,7 +89,7 @@ def extract_all_audio_files():
         file_path = os.sep.join([INPUT_PATH_PREFIX, filename])
         with myzipfile.ZipFile(file_path) as zip_file:
             folder_name = filename.split(".")[0]
-            folder_path = os.sep.join([INPUT_PATH_PREFIX,folder_name])
+            folder_path = os.sep.join([INPUT_PATH_PREFIX, folder_name])
             if not os.path.exists(folder_path):
                 os.mkdir(folder_path)
             extract_one_audio(zip_file, folder_path)
@@ -124,8 +125,9 @@ def create_structure():
 
 
 def main():
-    threading.Thread(target=check_mem).start()
-    # logging.basicConfig(level=logging.INFO)
+
+    logging.basicConfig(level=logging.INFO)
+    # threading.Thread(target=check_mem).start()
     logging.info("creating folder structure if necessary")
     create_structure()
     logging.info("copying pptx into zips")
