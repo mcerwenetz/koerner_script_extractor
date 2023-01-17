@@ -90,7 +90,7 @@ def main():
     rename_all_pptx()
     logging.info("extracting all audio files")
     extract_all_audio_files()
-    concat_all_chapters()
+    # concat_all_chapters()
 
 
 if __name__ == '__main__':
